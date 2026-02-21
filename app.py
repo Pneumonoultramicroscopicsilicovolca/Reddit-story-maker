@@ -7,20 +7,20 @@ import asyncio
 from moviepy.editor import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip
 
 # =========================================================
-# CONFIGURATION (GEMINI EDITION)
+# CONFIGURATION
 # =========================================================
 GEMINI_API_KEY = "AIzaSyCCaofacxUGUV_yDvIlpT_yTDXiuoV2Qn8"
 PEXELS_API_KEY = "1MfncNTQhyT9hbvYd0l2DKQYMBp59V8CUevjAYn3j9raXx3j714KVpMs"
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# Menggunakan model 'gemini-pro' agar lebih stabil di versi library apapun
+model = genai.GenerativeModel('gemini-pro')
 
 st.set_page_config(page_title="Reddit Story Generator", layout="centered")
 st.title("🎬 Reddit Story Generator")
 st.write("Create viral TikTok/Reels videos automatically!")
 
-# Topic Input
-topic = st.text_area("Enter your topic or story prompt:", placeholder="Example: A story about a secret door in my basement...")
+topic = st.text_area("Enter your topic or story prompt:", placeholder="Example: A story about a secret door...")
 
 def get_pexels_video(query):
     headers = {"Authorization": PEXELS_API_KEY}
@@ -45,7 +45,7 @@ if st.button("🚀 Generate Video"):
         with st.spinner("Processing..."):
             try:
                 # 1. Generate Story
-                prompt = f"Write a short, engaging Reddit-style story about: {topic}. Keep it under 50 words and use English."
+                prompt = f"Write a short Reddit-style story about: {topic}. Max 40 words, English."
                 response = model.generate_content(prompt)
                 story = response.text
                 st.info(f"Story: {story}")
@@ -70,12 +70,10 @@ if st.button("🚀 Generate Video"):
                 final_video = CompositeVideoClip([video, txt_clip])
                 final_video.write_videofile("final_output.mp4", fps=24, codec="libx264")
 
-                # Tampilan Video
                 st.video("final_output.mp4")
-                st.success("Success!")
+                st.success("Boom! Video Done!")
                 
             except Exception as e:
                 st.error(f"Error: {e}")
 
-st.sidebar.markdown("---")
-st.sidebar.write("Engine: **Gemini ⚡** | Status: **Ready ✅**")
+st.sidebar.write("Engine: **Gemini Pro ⚡**")
