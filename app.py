@@ -2,46 +2,58 @@ import streamlit as st
 import os
 import sys
 
-st.title("🔍 Mode Debugger: Mencari 'Penyusup'")
+st.set_page_config(page_title="Debugger Mode", icon="🔍")
+st.title("🔍 Deep Debugger: Mencari Jejak DB_USERNAME")
 
-# 1. Cek isi file app.py itu sendiri (Apakah ada kode tersembunyi?)
-st.subheader("1. Isi File app.py")
+# --- TEST 1: SCAN ISI FILE ---
+st.subheader("1. File Scan (Mencari Teks Tersembunyi)")
 try:
     with open(__file__, "r") as f:
-        content = f.read()
-        if "DB_USERNAME" in content:
-            st.error("🚨 DITEMUKAN: Ada kata 'DB_USERNAME' di dalam kode app.py kamu!")
-        else:
-            st.success("Aman: Tidak ada kata 'DB_USERNAME' di dalam kode app.py.")
+        lines = f.readlines()
+        found = False
+        for i, line in enumerate(lines):
+            if "DB_USERNAME" in line:
+                st.error(f"🚨 BARIS {i+1}: Ditemukan teks 'DB_USERNAME'!")
+                st.code(line.strip())
+                found = True
+        if not found:
+            st.success("✅ Tidak ada teks 'DB_USERNAME' di dalam file ini.")
 except Exception as e:
-    st.write(f"Gagal baca file: {e}")
+    st.error(f"Gagal membaca file: {e}")
 
-# 2. Cek Environment Variables (Apakah Streamlit maksa cari DB?)
-st.subheader("2. Cek Environment Variables")
-env_keys = list(os.environ.keys())
-db_keys = [k for k in env_keys if "DB" in k or "USER" in k]
-if db_keys:
-    st.warning(f"Ada variabel lingkungan terkait DB: {db_keys}")
-else:
-    st.write("Environment bersih dari variabel DB.")
-
-# 3. Cek Streamlit Secrets
-st.subheader("3. Cek Streamlit Secrets")
-try:
-    if st.secrets:
-        st.write("Isi Secrets yang terdeteksi:")
-        st.json(list(st.secrets.keys()))
-    else:
-        st.write("Secrets kosong.")
-except Exception:
-    st.write("Tidak ada file secrets.toml yang terdeteksi.")
-
-# 4. Tes Import Library (Biasanya error muncul pas import)
-st.subheader("4. Tes Import Library")
+# --- TEST 2: KONEKSI GEMINI (PENYEBAB 404) ---
+st.subheader("2. Diagnostic Library & AI")
 try:
     import google.generativeai as genai
-    st.success("Import Google AI: BERHASIL")
+    v = genai.__version__
+    st.write(f"Versi Google AI: `{v}`")
+    
+    # Cek apakah model flash tersedia di versi ini
+    GEMINI_API_KEY = "AIzaSyCCaofacxUGUV_yDvIlpT_yTDXiuoV2Qn8" # Pakai key kamu
+    genai.configure(api_key=GEMINI_API_KEY)
+    
+    models = [m.name for m in genai.list_models()]
+    st.write("Model yang tersedia:")
+    st.json(models)
+    
+    if 'models/gemini-1.5-flash' in models:
+        st.success("✅ Model Flash TERSEDIA!")
+    else:
+        st.warning("⚠️ Model Flash TIDAK ditemukan di list.")
 except Exception as e:
-    st.error(f"Import Google AI: GAGAL ({e})")
+    st.error(f"❌ Error saat cek AI: {e}")
 
-st.info("💡 Tolong screenshot hasil dari halaman ini dan kasih tahu aku bagian mana yang warnanya MERAH.")
+# --- TEST 3: STREAMLIT SECRETS ---
+st.subheader("3. Streamlit Secrets & Environment")
+if st.secrets:
+    st.write("Daftar kunci di Secrets:")
+    st.json(list(st.secrets.keys()))
+    if "DB_USERNAME" in st.secrets:
+        st.error("🚨 KETEMU! DB_USERNAME ada di bagian SECRETS Streamlit Cloud kamu.")
+else:
+    st.write("Secrets kosong.")
+
+# --- TEST 4: CHECK PATH ---
+st.subheader("4. System Path")
+st.write(f"Python executable: `{sys.executable}`")
+st.write(f"Current Directory: `{os.getcwd()}`")
