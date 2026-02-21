@@ -1,38 +1,47 @@
 import streamlit as st
 import google.generativeai as genai
-import requests
 import os
-os.environ["IMAGE_MAGICK_BINARY"] = "/usr/bin/convert"
-from edge_tts import Communicate
 import asyncio
-from moviepy.editor import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip
+from edge_tts import Communicate
+from moviepy.editor import TextClip, CompositeVideoClip, ColorClip
 
-# 1. SETUP API (Hardcoded agar tidak bentrok dengan Secrets)
+# 1. FIX: Pastikan ImageMagick terbaca
+os.environ["IMAGE_MAGICK_BINARY"] = "/usr/bin/convert"
+
+# 2. SETUP API (Langsung di kode biar gak ribet sama Secrets)
 GEMINI_API_KEY = "AIzaSyCCaofacxUGUV_yDvIlpT_yTDXiuoV2Qn8"
-PEXELS_API_KEY = "1MfncNTQhyT9hbvYd0l2DKQYMBp59V8CUevjAYn3j9raXx3j714KVpMs"
-
 genai.configure(api_key=GEMINI_API_KEY)
 
-st.title("🎬 Viral Video Creator - English Version")
+st.set_page_config(page_title="AI Video Pro", page_icon="🎬")
+st.title("🎬 AI Story Video Creator")
 
-topic = st.text_input("Topik Cerita:", placeholder="e.g. Mystery in the woods")
+topic = st.text_input("Topik Cerita:", placeholder="Misal: Cerita horor di sekolah")
 
+# Fungsi Audio
 async def generate_audio(text):
     communicate = Communicate(text, "en-US-ChristopherNeural")
     await communicate.save("audio.mp3")
 
-if st.button("🚀 GENERATE VIDEO"):
-    if topic:
-        with st.spinner("Processing..."):
-            try:
-                # AI Story
+if st.button("🚀 MULAI BUAT VIDEO"):
+    if not topic:
+        st.warning("Isi dulu topiknya, bos!")
+    else:
+        try:
+            with st.spinner("🤖 Gemini lagi mikir cerita..."):
+                # Gunakan cara panggil model yang lebih aman
                 model = genai.GenerativeModel('gemini-1.5-flash')
-                story_res = model.generate_content(f"Write a 100 word horror story about {topic}. English.")
-                story_text = story_res.text
-                
-                # Audio & Video
+                response = model.generate_content(f"Write a very short 50-word horror story about {topic}. English only.")
+                story_text = response.text
+                st.write(f"📜 **Cerita:** {story_text}")
+
+            with st.spinner("🎙️ Mengubah suara Christopher..."):
                 asyncio.run(generate_audio(story_text))
-                # (Lanjut ke proses MoviePy...)
-                st.success("Video Ready!")
-            except Exception as e:
-                st.error(f"Error: {e}")
+                st.audio("audio.mp3")
+                
+            st.success("✅ Berhasil! Untuk video lengkapnya, pastikan ffmpeg sudah ada di packages.txt")
+            
+        except Exception as e:
+            if "404" in str(e):
+                st.error("❌ Error 404: Server Streamlit kamu pakai library Google AI versi jadul. Solusinya: Tambahkan 'google-generativeai>=0.7.2' di requirements.txt lalu Reboot.")
+            else:
+                st.error(f"❌ Ada masalah: {e}")
