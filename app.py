@@ -1,67 +1,47 @@
 import streamlit as st
-import google.generativeai as genai
-import requests
 import os
-from edge_tts import Communicate
-import asyncio
-from moviepy.editor import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip
+import sys
 
-# CONFIG
-GEMINI_API_KEY = "AIzaSyCCaofacxUGUV_yDvIlpT_yTDXiuoV2Qn8"
-PEXELS_API_KEY = "1MfncNTQhyT9hbvYd0l2DKQYMBp59V8CUevjAYn3j9raXx3j714KVpMs"
+st.title("🔍 Mode Debugger: Mencari 'Penyusup'")
 
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 1. Cek isi file app.py itu sendiri (Apakah ada kode tersembunyi?)
+st.subheader("1. Isi File app.py")
+try:
+    with open(__file__, "r") as f:
+        content = f.read()
+        if "DB_USERNAME" in content:
+            st.error("🚨 DITEMUKAN: Ada kata 'DB_USERNAME' di dalam kode app.py kamu!")
+        else:
+            st.success("Aman: Tidak ada kata 'DB_USERNAME' di dalam kode app.py.")
+except Exception as e:
+    st.write(f"Gagal baca file: {e}")
 
-st.title("🎬 Viral One-Word Subtitle Creator")
+# 2. Cek Environment Variables (Apakah Streamlit maksa cari DB?)
+st.subheader("2. Cek Environment Variables")
+env_keys = list(os.environ.keys())
+db_keys = [k for k in env_keys if "DB" in k or "USER" in k]
+if db_keys:
+    st.warning(f"Ada variabel lingkungan terkait DB: {db_keys}")
+else:
+    st.write("Environment bersih dari variabel DB.")
 
-topic = st.text_input("Topik Cerita (Contoh: Haunted House):")
-
-def get_video(query):
-    headers = {"Authorization": PEXELS_API_KEY}
-    url = f"https://api.pexels.com/videos/search?query={query}&per_page=1&orientation=portrait"
-    r = requests.get(url, headers=headers)
-    return r.json()['videos'][0]['video_files'][0]['link']
-
-async def make_voice(text):
-    cmt = Communicate(text, "en-US-ChristopherNeural")
-    await cmt.save("suara.mp3")
-
-if st.button("🚀 GENERATE VIDEO FINAL"):
-    if not topic:
-        st.error("Isi topik dulu!")
+# 3. Cek Streamlit Secrets
+st.subheader("3. Cek Streamlit Secrets")
+try:
+    if st.secrets:
+        st.write("Isi Secrets yang terdeteksi:")
+        st.json(list(st.secrets.keys()))
     else:
-        with st.spinner("Sedang merender subtitle per kata... (Bisa 10 menit, jangan diclose!)"):
-            try:
-                # 1. Cerita
-                res = model.generate_content(f"Write a 150 word gripping story about {topic}. English.")
-                cerita = res.text
-                st.info("Cerita Berhasil Dibuat!")
+        st.write("Secrets kosong.")
+except Exception:
+    st.write("Tidak ada file secrets.toml yang terdeteksi.")
 
-                # 2. Suara
-                asyncio.run(make_voice(cerita))
-                audio = AudioFileClip("suara.mp3")
+# 4. Tes Import Library (Biasanya error muncul pas import)
+st.subheader("4. Tes Import Library")
+try:
+    import google.generativeai as genai
+    st.success("Import Google AI: BERHASIL")
+except Exception as e:
+    st.error(f"Import Google AI: GAGAL ({e})")
 
-                # 3. Video
-                with open("bg.mp4", "wb") as f:
-                    f.write(requests.get(get_video("minecraft parkour")).content)
-
-                # 4. Editing
-                video = VideoFileClip("bg.mp4").loop(duration=audio.duration).resize(height=1280).set_audio(audio)
-
-                # 5. SUBTITLE PER KATA
-                words = cerita.split()
-                duration_per_word = audio.duration / len(words)
-                clips = [video]
-                curr = 0
-                for word in words:
-                    txt = TextClip(word.upper(), fontsize=70, color='yellow', font='Arial-Bold',
-                                   stroke_color='black', stroke_width=2).set_start(curr).set_duration(duration_per_word).set_position('center')
-                    clips.append(txt)
-                    curr += duration_per_word
-
-                final = CompositeVideoClip(clips)
-                final.write_videofile("hasil.mp4", fps=24, codec="libx264")
-                st.video("hasil.mp4")
-            except Exception as e:
-                st.error(f"Error: {e}")
+st.info("💡 Tolong screenshot hasil dari halaman ini dan kasih tahu aku bagian mana yang warnanya MERAH.")
