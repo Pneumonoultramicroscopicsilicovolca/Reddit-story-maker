@@ -11,29 +11,75 @@ GEMINI_API_KEY = "AIzaSyCCaofacxUGUV_yDvIlpT_yTDXiuoV2Qn8"
 PEXELS_API_KEY = "1MfncNTQhyT9hbvYd0l2DKQYMBp59V8CUevjAYn3j9raXx3j714KVpMs"
 
 genai.configure(api_key=GEMINI_API_KEY)
-# Menggunakan 'gemini-pro' karena paling kompatibel dengan berbagai versi library
-model = genai.GenerativeModel('gemini-pro')
+model = genai.GenerativeModel('models/gemini-1.5-flash')
 
-st.title("🎬 Viral Video Creator")
+st.title("🎬 Viral One-Word Subtitle Creator")
 
-topic = st.text_input("Story Topic:")
+topic = st.text_input("Topik Cerita (Contoh: Horror story in a mall):")
 
-async def save_audio(text):
-    communicate = Communicate(text, "en-US-ChristopherNeural")
-    await communicate.save("audio.mp3")
-
-if st.button("Generate"):
+def get_video(query):
+    headers = {"Authorization": PEXELS_API_KEY}
+    url = f"https://api.pexels.com/videos/search?query={query}&per_page=1&orientation=portrait"
     try:
-        # 1. AI Story
-        res = model.generate_content(f"Write a 30-word story about {topic}")
-        story = res.text
-        st.write(f"Story: {story}")
-        
-        # 2. Audio
-        asyncio.run(save_audio(story))
-        
-        # 3. Video & Merge
-        # (Logika pexels & moviepy tetap sama seperti sebelumnya)
-        st.success("Check your folder for final_output.mp4!")
-    except Exception as e:
-        st.error(f"Error: {e}")
+        r = requests.get(url, headers=headers)
+        return r.json()['videos'][0]['video_files'][0]['link']
+    except:
+        return None
+
+async def make_voice(text):
+    cmt = Communicate(text, "en-US-ChristopherNeural")
+    await cmt.save("suara.mp3")
+
+if st.button("🚀 Generate Viral Video"):
+    if not topic:
+        st.error("Isi topik dulu bos!")
+    else:
+        with st.spinner("Lagi proses subtitle per kata..."):
+            try:
+                # 1. Bikin Cerita Panjang
+                prompt = f"Write a long, gripping Reddit-style story about {topic}. Around 250 words, English."
+                res = model.generate_content(prompt)
+                cerita = res.text
+                st.info("Cerita Berhasil Dibuat!")
+
+                # 2. Bikin Suara
+                asyncio.run(make_voice(cerita))
+                audio = AudioFileClip("suara.mp3")
+                durasi_total = audio.duration
+
+                # 3. Ambil Video Background
+                link = get_video("minecraft parkour") # Ganti tema di sini
+                with open("bg.mp4", "wb") as f:
+                    f.write(requests.get(link).content)
+
+                # 4. Edit Video (Full Screen)
+                video_awal = VideoFileClip("bg.mp4")
+                if video_awal.duration < durasi_total:
+                    video = video_awal.loop(duration=durasi_total).resize(height=1280)
+                else:
+                    video = video_awal.subclip(0, durasi_total).resize(height=1280)
+                
+                video = video.set_audio(audio)
+
+                # 5. LOGIKA SUBTITLE PER KATA (Dynamic)
+                words = cerita.split()
+                duration_per_word = durasi_total / len(words)
+                clips = [video]
+                
+                current_time = 0
+                for word in words:
+                    # Bikin teks per kata
+                    txt = TextClip(word.upper(), fontsize=70, color='yellow', font='Arial-Bold',
+                                   stroke_color='black', stroke_width=2).set_start(current_time).set_duration(duration_per_word).set_position('center')
+                    clips.append(txt)
+                    current_time += duration_per_word
+
+                # Gabungkan video dengan ribuan potongan kata
+                final_video = CompositeVideoClip(clips)
+                final_video.write_videofile("output.mp4", fps=24, codec="libx264")
+
+                st.video("output.mp4")
+                st.success("Selesai! Subtitle muncul per kata!")
+
+            except Exception as e:
+                st.error(f"Error: {e}")
