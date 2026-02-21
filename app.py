@@ -13,14 +13,14 @@ GEMINI_API_KEY = "AIzaSyCCaofacxUGUV_yDvIlpT_yTDXiuoV2Qn8"
 PEXELS_API_KEY = "1MfncNTQhyT9hbvYd0l2DKQYMBp59V8CUevjAYn3j9raXx3j714KVpMs"
 
 genai.configure(api_key=GEMINI_API_KEY)
-# Menggunakan model 'gemini-pro' agar lebih stabil di versi library apapun
-model = genai.GenerativeModel('gemini-pro')
+
+# Kita pakai 'gemini-1.5-flash' tapi dengan library versi baru
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 st.set_page_config(page_title="Reddit Story Generator", layout="centered")
 st.title("🎬 Reddit Story Generator")
-st.write("Create viral TikTok/Reels videos automatically!")
 
-topic = st.text_area("Enter your topic or story prompt:", placeholder="Example: A story about a secret door...")
+topic = st.text_area("Enter your story topic:", placeholder="Example: My wife stole my money...")
 
 def get_pexels_video(query):
     headers = {"Authorization": PEXELS_API_KEY}
@@ -36,44 +36,44 @@ def get_pexels_video(query):
 
 async def generate_voice(text):
     communicate = Communicate(text, "en-US-ChristopherNeural")
-    await communicate.save("audio.mp3")
+    await asyncio.wait_for(communicate.save("audio.mp3"), timeout=30)
 
 if st.button("🚀 Generate Video"):
     if not topic:
-        st.error("Please enter a topic first!")
+        st.error("Enter a topic first!")
     else:
-        with st.spinner("Processing..."):
+        with st.spinner("Magic in progress..."):
             try:
-                # 1. Generate Story
-                prompt = f"Write a short Reddit-style story about: {topic}. Max 40 words, English."
+                # 1. Story
+                prompt = f"Write a short, viral Reddit-style story about: {topic}. Max 40 words, English."
                 response = model.generate_content(prompt)
-                story = response.text
-                st.info(f"Story: {story}")
+                story_text = response.text
+                st.info(f"Generated Story: {story_text}")
 
-                # 2. Generate Voice
-                asyncio.run(generate_voice(story))
+                # 2. Voice
+                asyncio.run(generate_voice(story_text))
 
-                # 3. Fetch Background Video
+                # 3. Background
                 video_url = get_pexels_video("parkour")
                 if video_url:
                     with open("bg_video.mp4", "wb") as f:
                         f.write(requests.get(video_url).content)
                 
-                # 4. Video Editing
+                # 4. Editing
                 audio = AudioFileClip("audio.mp3")
                 video = VideoFileClip("bg_video.mp4").subclip(0, audio.duration).resize(height=1280)
                 video = video.set_audio(audio)
 
-                txt_clip = TextClip(story, fontsize=40, color='white', font='Arial-Bold', 
+                txt_clip = TextClip(story_text, fontsize=45, color='white', font='Arial-Bold', 
                                    method='caption', size=(video.w*0.8, None)).set_duration(audio.duration).set_position('center')
                 
                 final_video = CompositeVideoClip([video, txt_clip])
-                final_video.write_videofile("final_output.mp4", fps=24, codec="libx264")
+                final_video.write_videofile("final_output.mp4", fps=24, codec="libx264", audio_codec="aac")
 
                 st.video("final_output.mp4")
-                st.success("Boom! Video Done!")
+                st.success("DONE! Enjoy your video!")
                 
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.error(f"Error detail: {e}")
 
-st.sidebar.write("Engine: **Gemini Pro ⚡**")
+st.sidebar.write("Status: **Ready to Roll 🚀**")
