@@ -1,0 +1,5 @@
+streamlit
+openai==0.28
+edge-tts
+moviepy
+requests
