@@ -10,7 +10,7 @@ import random
 # =========================================================
 # API CONFIGURATION (HARDCODED)
 # =========================================================
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "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"
 PEXELS_API_KEY = "1MfncNTQhyT9hbvYd0l2DKQYMBp59V8CUevjAYn3j9raXx3j714KVpMs"
 
 openai.api_key = OPENAI_API_KEY
