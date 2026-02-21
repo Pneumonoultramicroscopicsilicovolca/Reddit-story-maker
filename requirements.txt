@@ -1,6 +1,7 @@
-streamlit
+streamlit==1.31.0
 openai==0.28
 edge-tts
-moviepy
+moviepy==1.0.3
 requests
-imageio[ffmpeg]
+imageio==2.33.0
+imageio-ffmpeg
