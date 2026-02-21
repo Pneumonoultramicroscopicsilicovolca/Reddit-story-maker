@@ -2,6 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import requests
 import os
+os.environ["IMAGE_MAGICK_BINARY"] = "/usr/bin/convert
 from edge_tts import Communicate
 import asyncio
 from moviepy.editor import VideoFileClip, AudioFileClip, TextClip, CompositeVideoClip
