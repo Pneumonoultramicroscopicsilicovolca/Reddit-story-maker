@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import os
 
-# 1. FIX: Paksa ImageMagick & Library Path
+# 1. FIX: Pastikan Path ImageMagick Benar
 os.environ["IMAGE_MAGICK_BINARY"] = "/usr/bin/convert"
 
 # 2. SETUP API
@@ -11,24 +11,26 @@ genai.configure(api_key=GEMINI_API_KEY)
 
 st.title("🎬 AI Video Creator Final")
 
-# Diagnosis Versi (Biar kita tahu kenapa 404)
+# Sidebar untuk cek versi (Penting untuk diagnosa 404)
 st.sidebar.write(f"Library Version: {genai.__version__}")
 
-topic = st.text_input("Topik Cerita:")
+topic = st.text_input("Topik Cerita:", placeholder="Contoh: Misteri di stasiun tua")
 
-if st.button("GENERATE"):
-    try:
-        # Gunakan GenerativeModel dengan konfigurasi lebih ketat
-        model = genai.GenerativeModel(
-            model_name='gemini-1.5-flash',
-            generation_config={"speed_optimized": True}
-        )
-        
-        # Tes panggil model
-        response = model.generate_content(f"Tell a 20-word story about {topic}")
-        st.success("🤖 Gemini Terkoneksi!")
-        st.write(response.text)
-        
-    except Exception as e:
-        st.error(f"Waduh, masih error: {e}")
-        st.info("Kalau muncul 404, artinya library google-generativeai di server kamu masih versi KUNO.")
+if st.button("GENERATE STORY"):
+    if topic:
+        try:
+            with st.spinner("🤖 Gemini sedang menulis cerita..."):
+                # Panggil model tanpa config yang aneh-aneh
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                # Tambahkan instruksi agar cerita pendek saja
+                prompt = f"Write a very short 40-word horror story about {topic}. English only."
+                response = model.generate_content(prompt)
+                
+                st.success("✅ Gemini Berhasil Menjawab!")
+                st.write(response.text)
+                
+        except Exception as e:
+            st.error(f"Waduh, ada error: {e}")
+    else:
+        st.warning("Masukkan topik dulu ya!")
